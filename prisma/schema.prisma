@@ -1,0 +1,326 @@
+// Prisma Schema - 玄咪AI NexusMeta 数据库模型
+// 后端 Node.js + Express + TypeScript
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 用户系统
+// ============================================================
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String?
+  avatar      String?
+  phone       String?
+  region      String?               // 地区（新加坡/马来西亚/美国/...）
+  bio         String?               // 个人简介
+  location    String?               // 所在地
+
+  // 订阅 + 积分
+  plan        PlanType   @default(FREE)
+  credits     Int        @default(0)
+  creditsUsed Int        @default(0)
+
+  // 状态 + 角色
+  status      UserStatus @default(ACTIVE)
+  role        UserRole   @default(USER)
+
+  apiKey      String?    @unique    // API Key
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastLoginAt DateTime?
+
+  avatars      Avatar[]
+  divinations  Divination[]
+  translations Translation[]
+  videos       Video[]
+  orders       Order[]
+
+  @@map("users")
+}
+
+enum PlanType {
+  FREE          // 免费版
+  STARTER       // 入门版
+  PROFESSIONAL  // 专业版
+  ENTERPRISE    // 企业版
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+// ============================================================
+// 数字人模型
+// ============================================================
+model Avatar {
+  id        String       @id @default(cuid())
+  userId    String
+  name      String
+  videoUrl  String
+  modelUrl  String?
+  status    AvatarStatus @default(PROCESSING)
+  progress  Int          @default(0)
+  thumbnail String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos Video[]
+
+  @@map("avatars")
+}
+
+enum AvatarStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+// ============================================================
+// 命理解盘记录
+// ============================================================
+model Divination {
+  id        String         @id @default(cuid())
+  userId    String
+  type      DivinationType
+
+  name       String?
+  gender     Gender?
+  birthDate  DateTime
+  birthTime  String?
+  birthPlace String?
+
+  yearPillar      String?
+  monthPillar     String?
+  dayPillar       String?
+  hourPillar      String?
+  dayMaster       String?
+  dayMasterElement String?
+
+  analysis      String
+  summary       String?
+  luckyElements String[]
+  weakElements  String[]
+
+  fortuneScore Int?
+  healthScore  Int?
+  wealthScore  Int?
+  loveScore    Int?
+  careerScore  Int?
+
+  suggestions String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("divinations")
+}
+
+enum DivinationType {
+  BAZI
+  ZIWEI
+  FENGSHUI
+  COMPATIBILITY
+  YEARLY_FORTUNE
+  MONTHLY_FORTUNE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+// ============================================================
+// 翻译 + 视频记录
+// ============================================================
+model Translation {
+  id         String     @id @default(cuid())
+  userId     String
+  sourceText String
+  targetLang String
+  resultText String?
+  status     TaskStatus @default(PENDING)
+  audioUrl   String?
+  videoUrl   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("translations")
+}
+
+model Video {
+  id        String     @id @default(cuid())
+  userId    String
+  avatarId  String?
+  title     String?
+  script    String
+  voiceType String?
+  language  String?
+  status    TaskStatus @default(PENDING)
+  videoUrl  String?
+  thumbnail String?
+  duration  Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatar Avatar? @relation(fields: [avatarId], references: [id], onDelete: SetNull)
+
+  @@map("videos")
+}
+
+enum TaskStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ============================================================
+// 订单
+// ============================================================
+model Order {
+  id        String      @id @default(cuid())
+  displayId String      @unique    // ORD-240701
+  userId    String
+  amount    Float
+  currency  String      @default("CNY")
+  status    OrderStatus @default(PENDING)
+  plan      PlanType?
+  credits   Int?
+  method    String?                 // 支付方式：Stripe / PayPal / 微信支付 / 银行转账
+  paidAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING    // 待付款
+  COMPLETED  // 已完成
+  CANCELLED  // 已取消
+  REFUNDED   // 已退款
+}
+
+// ============================================================
+// 内容管理：FAQ
+// ============================================================
+model Faq {
+  id       Int    @id @default(autoincrement())
+  question String
+  answer   String
+  lang     String @default("zh")   // zh / en / tw
+  order    Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("faqs")
+}
+
+// ============================================================
+// 内容管理：客户评价
+// ============================================================
+model Review {
+  id      Int    @id @default(autoincrement())
+  name    String
+  role    String                    // 用户身份/头衔
+  content String
+  rating  Int    @default(5)        // 1-5
+  lang    String @default("zh")
+  avatar  String?                   // 头像首字符
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reviews")
+}
+
+// ============================================================
+// 内容管理：合作方 Logo
+// ============================================================
+model PartnerLogo {
+  id       Int    @id @default(autoincrement())
+  name     String
+  imageUrl String?
+  order    Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@map("partner_logos")
+}
+
+// ============================================================
+// 多语言翻译条目
+// ============================================================
+model TranslationEntry {
+  id      Int    @id @default(autoincrement())
+  key     String @unique             // 如 "hero.title"
+  zh      String                     // 简体中文
+  en      String                     // 英文
+  tw      String                     // 繁体中文
+  section String @default("general") // Hero / CTA / Nav / Features / Pricing
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("translation_entries")
+}
+
+// ============================================================
+// 系统配置（KV 结构）
+// ============================================================
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+// ============================================================
+// 操作日志
+// ============================================================
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    String?
+  userName  String?                  // 操作人姓名（冗余，方便查询）
+  action    String                   // 登录/编辑/新增/修改/删除/封禁/导出
+  module    String                   // 系统/内容管理/用户管理/订单管理/多语言管理/系统设置
+  detail    String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
