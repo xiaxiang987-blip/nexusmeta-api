@@ -25,6 +25,14 @@ const CREDIT_COST: Record<string, number> = {
   MONTHLY_FORTUNE: 10,
 }
 
+/** 标准化性别值：将任意大小写转为大写 MALE/FEMALE/OTHER */
+function normalizeGender(raw: string | undefined): string {
+  if (!raw) return 'OTHER'
+  const upper = raw.toUpperCase().trim()
+  if (['MALE', 'FEMALE', 'OTHER'].includes(upper)) return upper
+  return 'OTHER'
+}
+
 export const divinationController = {
   /** POST /api/divination/analyze — 通用命理分析（需登录） */
   async analyze(req: Request, res: Response, next: NextFunction) {
@@ -36,13 +44,13 @@ export const divinationController = {
       const divinationReq: DivinationRequest = {
         type: body.type,
         name: body.name,
-        gender: body.gender,
+        gender: normalizeGender(body.gender),
         birthDate: body.birthDate,
         birthTime: body.birthTime,
         birthPlace: body.birthPlace,
         language: body.language || 'zh',
         partnerName: body.partnerName,
-        partnerGender: body.partnerGender,
+        partnerGender: normalizeGender(body.partnerGender),
         partnerBirthDate: body.partnerBirthDate,
         partnerBirthTime: body.partnerBirthTime,
         targetYear: body.targetYear,
@@ -89,7 +97,7 @@ export const divinationController = {
       const result = await analyzeBazi({
         type: 'BAZI',
         name,
-        gender,
+        gender: normalizeGender(gender),
         birthDate,
         birthTime,
         birthPlace,
