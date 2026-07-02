@@ -1,5 +1,8 @@
 /**
  * 命理分析相关请求验证 Schema
+ *
+ * 重要：GenderEnum 兼容大小写输入（前端可能发送 male/MALE）
+ * BirthTime 支持多种格式（HH:MM, HH:MM:SS, H:MM）
  */
 
 import { z } from 'zod'
@@ -8,7 +11,17 @@ const DivinationTypeEnum = z.enum([
   'BAZI', 'ZIWEI', 'FENGSHUI', 'COMPATIBILITY', 'YEARLY_FORTUNE', 'MONTHLY_FORTUNE',
 ])
 
-const GenderEnum = z.enum(['MALE', 'FEMALE', 'OTHER'])
+// 兼容大小写的性别枚举：接受 male/female/other/MALE/FEMALE/OTHER 等任意格式
+const GenderEnum = z.string()
+  .transform((val) => {
+    const upper = val.toUpperCase().trim()
+    if (!['MALE', 'FEMALE', 'OTHER'].includes(upper)) {
+      throw new Error(`Invalid gender value: ${val}. Expected MALE, FEMALE or OTHER`)
+    }
+    return upper
+  })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .pipe(z.enum(['MALE', 'FEMALE', 'OTHER']) as any)
 
 // 支持的语言代码（部分列举）
 const supportedLanguages = [
@@ -48,7 +61,17 @@ export const divinationSchemas = {
     name: z.string().max(50).optional(),
     gender: GenderEnum,
     birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式应为 YYYY-MM-DD'),
-    birthTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    // 兼容多种时间格式：H:MM, HH:MM, HH:MM:SS 等（前端可能发送 "0:00" 而不是 "00:00"）
+    birthTime: z.preprocess((val) => {
+      if (typeof val !== 'string' || !val.trim()) return undefined
+      const parts = val.trim().split(':')
+      if (parts.length >= 2) {
+        const hour = parts[0].padStart(2, '0')
+        const min = parts[1].padStart(2, '0')
+        return `${hour}:${min}`
+      }
+      return val
+    }, z.string().regex(/^\d{2}:\d{2}$/, '时间格式应为 HH:MM').optional()).optional(),
     birthPlace: z.string().max(100).optional(),
     language: z.enum(supportedLanguages as [string, ...string[]]).default('zh'),
   }),
