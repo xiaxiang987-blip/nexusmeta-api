@@ -96,6 +96,14 @@ export const divinationController = {
         language: language || 'zh',
       })
 
+      if (!result.success) {
+        return res.status(503).json({
+          success: false,
+          error: result.error || 'AI 服务暂时不可用，请稍后重试',
+          timestamp: new Date().toISOString(),
+        })
+      }
+
       res.json({
         success: true,
         data: result.data,
@@ -115,6 +123,14 @@ export const divinationController = {
       logger.info('风水分析请求', { analysisType, language })
 
       const result = await analyzeFengshui(description, analysisType, language || 'zh')
+
+      if (!result.success) {
+        return res.status(503).json({
+          success: false,
+          error: result.error || '风水分析服务暂时不可用，请稍后重试',
+          timestamp: new Date().toISOString(),
+        })
+      }
 
       res.json(success(result.data, '风水分析完成'))
     } catch (err) {
