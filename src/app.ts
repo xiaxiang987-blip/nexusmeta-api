@@ -65,7 +65,8 @@ app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'nexusmeta-divination-api',
-    version: '1.0.0',
+    version: '1.1.0',
+    deployTime: '2026-07-02T21:29',
     timestamp: new Date().toISOString(),
     ai: config.openaiApiKey ? 'configured' : 'not_configured',
     environment: config.nodeEnv,
