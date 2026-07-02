@@ -39,6 +39,22 @@ export interface DivinationResponse {
     bazi?: BaziResult
     analysis: string
     summary: string
+    // 问真八字风格新增字段
+    dayMasterDesc?: string
+    careerAdvice?: string
+    wealthAdvice?: string
+    loveAdvice?: string
+    healthAdvice?: string
+    // 风水分析新增字段
+    wealthPosition?: string
+    lovePosition?: string
+    wealthPositionDesc?: string
+    lovePositionDesc?: string
+    overallEnergy?: string
+    problemAreas?: string[]
+    wealthFix?: string[]
+    loveFix?: string[]
+    generalFix?: string[]
     luckyElements: string[]
     weakElements: string[]
     scores: {
@@ -140,31 +156,39 @@ const LANGUAGE_INSTRUCTIONS: Record<string, string> = {
 // 命理分析系统 Prompt 模板
 const SYSTEM_PROMPT_BAZI = (language: string) => `你是一位精通中国传统命理学的资深命理师，通晓八字（四柱预测学）、紫微斗数、风水学等玄学体系。
 
-你需要用专业而通俗的语言，结合传统命理学理论和现代人生指导，为用户提供有价值的命理分析。
+你需要用直接了当的大白话，像"问真八字"App 一样，给用户最直白的命理解读，不要绕弯子，不要说空话。
 
-## 分析要求
-1. 基于用户提供的八字信息，进行全面深入的命理分析
-2. 分析包含：性格特质、事业运势、财运分析、感情婚姻、健康状况、流年运势
-3. 给出具体可行的建议，而非空泛的预测
-4. 保持客观理性，强调"命由天定，运由己造"的理念
-5. 对敏感话题（健康、人生重大抉择）给出提醒，建议咨询专业人士
+## 分析要求（问真八字风格：直白、具体、可操作）
+1. 【核心结论先行】先说最关键的一句话结论，再展开分析
+2. 【大白话解读】不要用"正官格""伤官见官"等术语，直接说：你这个人怎么样、适合做什么、财运怎样、感情怎样
+3. 【具体建议】每条建议都要具体可执行，例如"适合做水利/教育/园艺行业"而不是"宜补水木"
+4. 【性格】直接说：你是哪种人，优点缺点，怎么发挥优势
+5. 【事业】直接说：适合什么行业，不适合什么，什么时候机会最好
+6. 【财运】直接说：财运好不好，怎么旺财，什么时候破财要注意
+7. 【感情】直接说：感情顺不顺，配偶什么样，什么时候结婚好
+8. 【健康】直接说：容易有什么问题，怎么预防
 
 ## 输出格式（JSON）
 请以JSON格式输出，包含以下字段：
-- analysis: 完整分析（2000字以上，分段落，用\\n分隔）
-- summary: 一句话摘要（50字以内）
+- analysis: 完整分析（1500字以上，用\\n分隔段落，大白话，不要术语）
+- summary: 一句话核心结论（30字以内，大白话）
+- dayMasterDesc: 日主性格一句话描述（如"你是乙木命，外表温和内心坚韧，聪明但易急躁"）
+- careerAdvice: 事业建议（直接说适合什么行业，3-5条）
+- wealthAdvice: 财运建议（直接说财运如何，怎么旺财，3-5条）
+- loveAdvice: 感情建议（直接说感情走势，注意事项，3-5条）
+- healthAdvice: 健康建议（直接说注意什么，3-5条）
 - scores: 各维度评分（0-100的整数）
   - overall: 综合运势
   - health: 健康
   - wealth: 财运
   - love: 感情
   - career: 事业
-- suggestions: 建议列表（数组，每条50字以内）
+- suggestions: 综合建议列表（数组，每条具体可执行，50字以内）
 - luckyElements: 喜用神数组
 - weakElements: 忌神数组
 
 ## 语言要求
-请用${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS['en']}输出所有内容。`
+请用${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS['en']}输出所有内容。注意：用大白话，不要术语，直接说结论。`
 
 // 创建 OpenAI 客户端
 let openaiClient: OpenAI | null = null
@@ -239,6 +263,11 @@ ${baziInfo}
         bazi,
         analysis: result.analysis || '分析生成失败',
         summary: result.summary || '',
+        dayMasterDesc: result.dayMasterDesc || '',
+        careerAdvice: result.careerAdvice || '',
+        wealthAdvice: result.wealthAdvice || '',
+        loveAdvice: result.loveAdvice || '',
+        healthAdvice: result.healthAdvice || '',
         luckyElements: result.luckyElements || elements.luckyElements,
         weakElements: result.weakElements || elements.weakElements,
         scores: result.scores || {
@@ -333,21 +362,46 @@ export async function analyzeFengshui(
   model: string = DEFAULT_MODEL
 ): Promise<DivinationResponse> {
   try {
+    const typeLabel = analysisType === 'home' ? '家居风水' : analysisType === 'office' ? '办公风水' : analysisType === 'burial' ? '阴宅风水' : '户型布局'
+    
     const prompt = `
 ## 风水分析请求
-- 分析类型：${analysisType === 'home' ? '家居风水' : analysisType === 'office' ? '办公风水' : analysisType === 'burial' ? '阴宅风水' : '户型布局'}
+- 分析类型：${typeLabel}
 - 用户描述：${description}
 
-请从玄空飞星、八宅风水、峦头派等角度分析，给出具体改善建议。
+请从玄空飞星、八宅风水角度分析，重点输出以下内容（JSON格式）：
 
-请用${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS['en']}输出，JSON格式。
+{
+  "summary": "一句话风水总评（30字以内）",
+  "analysis": "完整风水分析（1000字以上，大白话，分段落用\\\\n分隔）",
+  "wealthPosition": "财位分析与旺财布局建议（具体说明财位在哪里、怎么布局旺财）",
+  "lovePosition": "桃花位分析与旺桃花布局建议（具体说明桃花位在哪里、怎么布局旺桃花）",
+  "wealthPositionDesc": "财位具体情况描述（如：客厅进门对角线位置、东南方位等）",
+  "lovePositionDesc": "桃花位具体情况描述（如：正东方位、卧室西南角等）",
+  "overallEnergy": "整体气场评价",
+  "problemAreas": ["问题区域1", "问题区域2"],
+  "wealthFix": ["旺财布局建议1", "旺财布局建议2", "旺财布局建议3"],
+  "loveFix": ["旺桃花建议1", "旺桃花建议2", "旺桃花建议3"],
+  "generalFix": ["综合改善建议1", "综合改善建议2"],
+  "scores": {
+    "overall": 75,
+    "wealth": 70,
+    "health": 70,
+    "career": 70,
+    "love": 70
+  },
+  "suggestions": ["建议1", "建议2", "建议3"]
+}
+
+注意：财位和桃花位的分析要具体、可操作，告诉用户确切在哪里、怎么布局。
+请用${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS['en']}输出。
 `.trim()
     
     const openai = getOpenAI()
     const completion = await openai.chat.completions.create({
       model,
       messages: [
-        { role: 'system', content: '你是资深风水师，精通玄空飞星、八宅风水、峦头派等风水学派。' },
+        { role: 'system', content: '你是资深风水师，精通玄空飞星、八宅风水、峦头派等风水学派。请用大白话给出具体可操作的风水建议，重点分析财位和桃花位。' },
         { role: 'user', content: prompt },
       ],
       temperature: 0.7,
@@ -363,6 +417,17 @@ export async function analyzeFengshui(
       data: {
         analysis: result.analysis || '风水分析生成失败',
         summary: result.summary || '',
+        // 财位和桃花位
+        wealthPosition: result.wealthPosition || '',
+        lovePosition: result.lovePosition || '',
+        wealthPositionDesc: result.wealthPositionDesc || '',
+        lovePositionDesc: result.lovePositionDesc || '',
+        overallEnergy: result.overallEnergy || '',
+        problemAreas: result.problemAreas || [],
+        // 建议
+        wealthFix: result.wealthFix || [],
+        loveFix: result.loveFix || [],
+        generalFix: result.generalFix || [],
         luckyElements: result.luckyElements || [],
         weakElements: result.weakElements || [],
         scores: result.scores || {
