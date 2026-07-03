@@ -23,6 +23,9 @@ import apiRoutes from './routes/index'
 
 const app = express()
 
+// 信任代理（Railway/CDN 反向代理场景必需）
+app.set('trust proxy', 1)
+
 // ===== AI 服务初始化 =====
 
 if (config.openaiApiKey) {
