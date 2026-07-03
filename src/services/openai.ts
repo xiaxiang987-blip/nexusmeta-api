@@ -17,13 +17,13 @@ import { BaziResult, formatBaziForPrompt, calcBazi, judgeDayMasterStrength, calc
 export interface DivinationRequest {
   type: 'BAZI' | 'ZIWEI' | 'FENGSHUI' | 'COMPATIBILITY' | 'YEARLY_FORTUNE' | 'MONTHLY_FORTUNE'
   name?: string
-  gender: 'MALE' | 'FEMALE'
+  gender: 'MALE' | 'FEMALE' | 'OTHER'
   birthDate: string  // YYYY-MM-DD
   birthTime?: string  // HH:MM or 时辰名称
   birthPlace?: string
   // 合盘用
   partnerName?: string
-  partnerGender?: 'MALE' | 'FEMALE'
+  partnerGender?: 'MALE' | 'FEMALE' | 'OTHER'
   partnerBirthDate?: string
   partnerBirthTime?: string
   // 流年用

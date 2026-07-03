@@ -198,7 +198,7 @@ export function calcBazi(
   month: number,
   day: number,
   hour: number,
-  gender: 'MALE' | 'FEMALE'
+  gender: 'MALE' | 'FEMALE' | 'OTHER'
 ): BaziResult {
   // 使用 lunar-javascript 精确计算
   const solar = Solar.fromYmd(year, month, day)
@@ -393,7 +393,7 @@ export function calcLuckyElements(bazi: BaziResult): {
 /**
  * 格式化八字结果用于 AI Prompt
  */
-export function formatBaziForPrompt(bazi: BaziResult, gender: 'MALE' | 'FEMALE', name?: string): string {
+export function formatBaziForPrompt(bazi: BaziResult, gender: 'MALE' | 'FEMALE' | 'OTHER', name?: string): string {
   const strength = judgeDayMasterStrength(bazi)
   const elements = calcLuckyElements(bazi)
   

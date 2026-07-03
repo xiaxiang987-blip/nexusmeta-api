@@ -26,10 +26,10 @@ const CREDIT_COST: Record<string, number> = {
 }
 
 /** 标准化性别值：将任意大小写转为大写 MALE/FEMALE/OTHER */
-function normalizeGender(raw: string | undefined): string {
+function normalizeGender(raw: string | undefined): 'MALE' | 'FEMALE' | 'OTHER' {
   if (!raw) return 'OTHER'
   const upper = raw.toUpperCase().trim()
-  if (['MALE', 'FEMALE', 'OTHER'].includes(upper)) return upper
+  if (upper === 'MALE' || upper === 'FEMALE' || upper === 'OTHER') return upper as 'MALE' | 'FEMALE' | 'OTHER'
   return 'OTHER'
 }
 
