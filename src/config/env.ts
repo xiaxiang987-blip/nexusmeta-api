@@ -28,7 +28,7 @@ export const config = {
   openaiBaseUrl: process.env.OPENAI_BASE_URL,
   
   // CORS
-  corsOrigin: process.env.CORS_ORIGIN?.split(',') || ['https://xuanmi.net', 'http://localhost:5173'],
+  corsOrigin: process.env.CORS_ORIGIN?.split(',') || ['https://xuanmi.net', 'https://api.xuanmi.net', 'http://localhost:5173'],
   
   // 限流
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
